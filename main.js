@@ -1,37 +1,24 @@
-import express from "express";
-import cors from "cors";
-import { request } from "undici";
+const http = require('http');
+const https = require('https');
+const httpProxy = require('http-proxy');
 
-const app = express();
-const PORT = process.env.PORT || 8080;
+// Создаём HTTP прокси-сервер
+const proxy = httpProxy.createProxyServer({});
 
-app.use(cors());
-
-app.get("/", async (req, res) => {
-  const targetUrl = req.query.url;
-
-  if (!targetUrl) {
-    return res.status(400).send("Missing 'url' query parameter.");
-  }
-
-  try {
-    const { statusCode, headers, body } = await request(targetUrl, {
-      method: "GET",
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/117.0.0.0 Safari/537.36",
-      },
+// Функция для обработки HTTPS запросов
+const createServer = (port) => {
+  return http.createServer((req, res) => {
+    // Прокси всё на целевой URL
+    proxy.web(req, res, {
+      target: req.url,  // Проксиируем запрос на целевой ресурс
+      changeOrigin: true, // Изменяем заголовки Origin
+      ws: true, // Включаем поддержку WebSocket
     });
+  });
+};
 
-    res.set("Content-Type", headers["content-type"] || "text/html");
-    res.status(statusCode);
-    body.pipe(res);
-  } catch (err) {
-    console.error("Fetch error:", err.message);
-    res.status(500).send("Proxy fetch failed.");
-  }
-});
-
-app.listen(PORT, () => {
-  console.log(`🚀 Прокси-обёртка запущена на порту ${PORT}`);
+// Для Render порты можно брать из окружения
+const PORT = process.env.PORT || 8080;
+createServer(PORT).listen(PORT, () => {
+  console.log(`🚀 HTTP прокси запущен на порту ${PORT}`);
 });
