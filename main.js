@@ -1,55 +1,38 @@
-const http = require("http");
-const net = require("net");
-const url = require("url");
+// server.js
+const express = require("express");
+const fetch = require("node-fetch");
+const cors = require("cors");
 
-const PORT = 8080; // поменяй при необходимости
+const app = express();
+const PORT = process.env.PORT || 8080;
 
-// Обработка обычных HTTP-запросов
-const requestHandler = (clientReq, clientRes) => {
-  const parsedUrl = url.parse(clientReq.url);
-  const options = {
-    hostname: parsedUrl.hostname,
-    port: parsedUrl.port || 80,
-    path: parsedUrl.path,
-    method: clientReq.method,
-    headers: clientReq.headers,
-  };
+app.use(cors());
 
-  const proxyReq = http.request(options, (proxyRes) => {
-    clientRes.writeHead(proxyRes.statusCode, proxyRes.headers);
-    proxyRes.pipe(clientRes, { end: true });
-  });
+app.get("/", async (req, res) => {
+  const targetUrl = req.query.url;
 
-  proxyReq.on("error", (err) => {
-    console.error("Request error:", err.message);
-    clientRes.writeHead(500);
-    clientRes.end("Proxy request error");
-  });
+  if (!targetUrl) {
+    return res.status(400).send("Missing 'url' query parameter.");
+  }
 
-  clientReq.pipe(proxyReq, { end: true });
-};
+  try {
+    const response = await fetch(targetUrl, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/117.0.0.0 Safari/537.36",
+      },
+    });
 
-// Обработка HTTPS (CONNECT)
-const connectHandler = (req, clientSocket, head) => {
-  const [host, port] = req.url.split(":");
+    const body = await response.text();
 
-  const serverSocket = net.connect(port || 443, host, () => {
-    clientSocket.write("HTTP/1.1 200 Connection Established\r\n\r\n");
-    serverSocket.write(head);
-    serverSocket.pipe(clientSocket);
-    clientSocket.pipe(serverSocket);
-  });
+    res.set("Content-Type", "text/html");
+    res.status(response.status).send(body);
+  } catch (err) {
+    console.error("Fetch error:", err.message);
+    res.status(500).send("Proxy fetch failed.");
+  }
+});
 
-  serverSocket.on("error", (err) => {
-    console.error("Tunnel error:", err.message);
-    clientSocket.end("HTTP/1.1 500 Tunnel Error\r\n");
-  });
-};
-
-// Создание сервера
-const server = http.createServer(requestHandler);
-server.on("connect", connectHandler);
-
-server.listen(PORT, () => {
-  console.log(`✅ Прокси сервер запущен на порту ${PORT}`);
+app.listen(PORT, () => {
+  console.log(`🚀 Прокси-обёртка запущена на порту ${PORT}`);
 });
