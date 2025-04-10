@@ -1,6 +1,6 @@
 import express from "express";
-import fetch from "node-fetch";
 import cors from "cors";
+import { request } from "undici";
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -15,17 +15,17 @@ app.get("/", async (req, res) => {
   }
 
   try {
-    const response = await fetch(targetUrl, {
+    const { statusCode, headers, body } = await request(targetUrl, {
+      method: "GET",
       headers: {
         "User-Agent":
           "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/117.0.0.0 Safari/537.36",
       },
     });
 
-    const body = await response.text();
-
-    res.set("Content-Type", "text/html");
-    res.status(response.status).send(body);
+    res.set("Content-Type", headers["content-type"] || "text/html");
+    res.status(statusCode);
+    body.pipe(res);
   } catch (err) {
     console.error("Fetch error:", err.message);
     res.status(500).send("Proxy fetch failed.");
