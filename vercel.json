@@ -2,14 +2,27 @@
     "version": 2,
     "builds": [
       {
-        "src": "main.js",
-        "use": "@now/node"
+        "src": "http-proxy.js",
+        "use": "@vercel/node"
+      },
+      {
+        "src": "full-proxy.js",
+        "use": "@vercel/node"
       }
     ],
     "routes": [
       {
+        "src": "/full-proxy(.*)",
+        "dest": "full-proxy.js"
+      },
+      {
+        "src": "/http-proxy(.*)",
+        "dest": "http-proxy.js"
+      },
+      {
         "src": "/(.*)",
-        "dest": "main.js"
+        "dest": "http-proxy.js"
       }
     ]
   }
+  
