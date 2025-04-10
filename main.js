@@ -1,7 +1,6 @@
-// server.js
-const express = require("express");
-const fetch = require("node-fetch");
-const cors = require("cors");
+import express from "express";
+import fetch from "node-fetch";
+import cors from "cors";
 
 const app = express();
 const PORT = process.env.PORT || 8080;
